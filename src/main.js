@@ -14,12 +14,10 @@ async function startCameraKit() {
     console.error('CameraKit Error:', event.detail);
   });
 
-  // 📱 Динамическое разрешение камеры
-  const isMobile = window.innerWidth < 768;
   const mediaStream = await navigator.mediaDevices.getUserMedia({
     video: {
-      width: { ideal: isMobile ? 720 : 1920 },
-      height: { ideal: isMobile ? 1280 : 1080 },
+      width: { ideal: 1920 },
+      height: { ideal: 1080 },
       facingMode: 'user'
     },
     audio: false
@@ -35,31 +33,6 @@ async function startCameraKit() {
   canvasContainer.innerHTML = '';
   const liveCanvas = session.output.live;
   canvasContainer.appendChild(liveCanvas);
-
-  // 🧠 Функция поворота canvas на телефоне
-  function applyOrientation() {
-    const orientation = window.screen.orientation?.angle || window.orientation || 0;
-  
-    if (orientation === 90 || orientation === -90) {
-      // Ландшафт: горизонтальное устройство
-      liveCanvas.style.transform = 'rotate(0deg)';
-      liveCanvas.style.width = '100vw';
-      liveCanvas.style.height = '100vh';
-    } else {
-      // Портрет: вертикальное устройство — ПОВЕРНУТЬ на 90°
-      liveCanvas.style.transform = 'rotate(90deg)';
-      liveCanvas.style.transformOrigin = 'center center';
-      liveCanvas.style.position = 'absolute';
-      liveCanvas.style.top = '0';
-      liveCanvas.style.left = '0';
-      liveCanvas.style.width = window.innerHeight + 'px';
-      liveCanvas.style.height = window.innerWidth + 'px';
-    }
-  }
-
-  applyOrientation();
-  window.addEventListener('orientationchange', applyOrientation);
-  window.addEventListener('resize', applyOrientation);
 
   // 🎭 Загрузка линзы
   const lens = await cameraKit.lensRepository.loadLens(LENS_ID, LENS_GROUP_ID);
