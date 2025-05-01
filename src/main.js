@@ -9,7 +9,7 @@ let session, liveCanvas;
 
 navigator.mediaDevices.enumerateDevices().then(devices => {
   const videoInputs = devices.filter(device => device.kind === 'videoinput');
-  if (videoInputs.length <= 1) {
+  if (videoInputs.length >= 1) {
     document.getElementById('switch-camera-btn')?.style.setProperty('display', 'none');
   }
 });
