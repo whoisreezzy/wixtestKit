@@ -20,14 +20,11 @@ const API_TOKEN = 'eyJhbGciOiJIUzI1NiIsImtpZCI6IkNhbnZhc1MyU0hNQUNQcm9kIiwidHlwI
 const LENS_GROUP_ID = 'f01d35c1-cfc6-4960-b3c9-de2ce373053a';
 const LENS_ID = '5023539e-5104-4286-85a6-936c2ad2d911';
 
+// Глобальные переменные
 let facingMode = 'user';
 let session, liveCanvas;
 let originalMediaStream;
-
-const isMobile = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
-if (isMobile) {
-  document.getElementById('switch-camera-btn')?.style.setProperty('display', 'block');
-}
+let timerEl, timerInterval;
 
 /**
  * Инициализирует SDK Snap CameraKit:
@@ -59,11 +56,7 @@ async function initializeCameraKit() {
  */
 async function startCamera() {
   const mediaStream = await navigator.mediaDevices.getUserMedia({
-    video: {
-      width: { ideal: 1920 },
-      height: { ideal: 1080 },
-      facingMode
-    },
+    video: { width: { ideal: 1920 }, height: { ideal: 1080 }, facingMode },
     audio: true
   });
   originalMediaStream = mediaStream;
@@ -94,6 +87,7 @@ async function startCamera() {
 function setupCaptureLogic() {
   const captureBtn = document.getElementById('capture-btn');
   let mediaRecorder, recordedChunks = [], pressTimer, recordingStarted = false;
+  let seconds = 0;
 
   const takePhoto = () => {
     const tempCanvas = document.createElement('canvas');
@@ -104,8 +98,6 @@ function setupCaptureLogic() {
     const a = document.createElement('a');
     a.href = image; a.download = 'snap-photo.png'; a.click();
   };
-
-  let recordingTimeout;
 
   const startRecording = () => {
     const canvasStream = liveCanvas.captureStream(30);
@@ -119,13 +111,23 @@ function setupCaptureLogic() {
       audioBitsPerSecond: 128000
     });
     recordedChunks = [];
+    seconds = 0;
 
-    mediaRecorder.ondataavailable = e => {
-      if (e.data.size > 0) recordedChunks.push(e.data);
-    };
+    // Запуск таймера отображения
+    timerEl.textContent = '00:00';
+    timerEl.style.display = 'block';
+    timerInterval = setInterval(() => {
+      seconds++;
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      timerEl.textContent = `${m < 10 ? '0' + m : m}:${s < 10 ? '0' + s : s}`;
+    }, 1000);
 
+    mediaRecorder.ondataavailable = e => { if (e.data.size) recordedChunks.push(e.data) };
     mediaRecorder.onstop = async () => {
       clearTimeout(recordingTimeout);
+      clearInterval(timerInterval);
+      timerEl.style.display = 'none';
       const webmBlob = new Blob(recordedChunks, { type: 'video/webm' });
       const mp4Blob = await convertWebmToMp4(webmBlob);
       const a = document.createElement('a');
@@ -136,10 +138,7 @@ function setupCaptureLogic() {
     };
 
     mediaRecorder.start();
-    recordingTimeout = setTimeout(() => {
-      if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-    }, 15000);
-
+    recordingTimeout = setTimeout(() => { if (mediaRecorder.state !== 'inactive') mediaRecorder.stop() }, 15000);
     captureBtn.classList.add('recording');
   };
 
@@ -179,26 +178,22 @@ document.getElementById('switch-camera-btn')?.addEventListener('click', async ()
  * @returns {Promise<Blob>} Конвертированный MP4 Blob
  */
 async function convertWebmToMp4(webmBlob) {
-  // ensure ffmpeg is loaded
   await loadFFmpegScript();
   const ffmpeg = FFmpeg.createFFmpeg({ log: true });
   await ffmpeg.load();
 
-  // write webm data
   const webmData = await webmBlob.arrayBuffer();
   ffmpeg.FS('writeFile', 'input.webm', new Uint8Array(webmData));
 
-  // convert to mp4
   await ffmpeg.run(
     '-i', 'input.webm',
-    '-r', '30',     
+    '-r', '30',
     '-c:v', 'libx264',
-    '-b:v', '4.5M', 
+    '-b:v', '4.5M',
     '-preset', 'ultrafast',
     'output.mp4'
   );
 
-  // read result
   const mp4Data = ffmpeg.FS('readFile', 'output.mp4');
   return new Blob([mp4Data.buffer], { type: 'video/mp4' });
 }
@@ -208,6 +203,24 @@ async function convertWebmToMp4(webmBlob) {
  * затем запускает инициализацию CameraKit.
  */
 window.addEventListener('DOMContentLoaded', async () => {
+  // Создаём элемент для отображения времени записи
+  timerEl = document.createElement('div');
+  timerEl.id = 'recording-timer';
+  Object.assign(timerEl.style, {
+    display: 'none',
+    position: 'fixed',
+    top: '10px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    color: '#fff',
+    fontSize: '18px',
+    zIndex: '1001',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: '4px 8px',
+    borderRadius: '4px'
+  });
+  document.body.appendChild(timerEl);
+
   try {
     await loadFFmpegScript();
   } catch (e) {
