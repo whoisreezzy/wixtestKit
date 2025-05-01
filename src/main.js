@@ -7,12 +7,11 @@ const LENS_ID = '5023539e-5104-4286-85a6-936c2ad2d911';
 let facingMode = 'user';
 let session, liveCanvas;
 
-navigator.mediaDevices.enumerateDevices().then(devices => {
-  const videoInputs = devices.filter(device => device.kind === 'videoinput');
-  if (videoInputs.length >= 1) {
-    document.getElementById('switch-camera-btn')?.style.setProperty('display', 'none');
-  }
-});
+const isMobile = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+if (!isMobile) {
+  document.getElementById('switch-camera-btn')?.style.setProperty('display', 'none');
+}
 
 async function initializeCameraKit() {
   const cameraKit = await bootstrapCameraKit({ apiToken: API_TOKEN });
