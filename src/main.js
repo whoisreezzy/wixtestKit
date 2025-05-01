@@ -7,10 +7,9 @@ const LENS_ID = '5023539e-5104-4286-85a6-936c2ad2d911';
 let facingMode = 'user';
 let session, liveCanvas;
 
-// ❗️Скрыть кнопку переключения, если 1 камера
 navigator.mediaDevices.enumerateDevices().then(devices => {
   const videoInputs = devices.filter(device => device.kind === 'videoinput');
-  if (videoInputs.length > 2) {
+  if (videoInputs.length <= 1) {
     document.getElementById('switch-camera-btn')?.style.setProperty('display', 'none');
   }
 });
