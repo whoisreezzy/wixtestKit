@@ -7,6 +7,14 @@ const LENS_ID = '5023539e-5104-4286-85a6-936c2ad2d911';
 let facingMode = 'user';
 let session, liveCanvas;
 
+// ❗️Скрыть кнопку переключения, если 1 камера
+navigator.mediaDevices.enumerateDevices().then(devices => {
+  const videoInputs = devices.filter(device => device.kind === 'videoinput');
+  if (videoInputs.length < 2) {
+    document.getElementById('switch-camera-btn')?.style.setProperty('display', 'none');
+  }
+});
+
 async function initializeCameraKit() {
   const cameraKit = await bootstrapCameraKit({ apiToken: API_TOKEN });
   session = await cameraKit.createSession();
@@ -26,14 +34,14 @@ async function startCamera() {
     video: {
       width: { ideal: 1920 },
       height: { ideal: 1080 },
-      facingMode: { exact: facingMode }
+      facingMode
     },
     audio: false
   });
 
   const cameraSource = createMediaStreamSource(mediaStream, {
-    transform: Transform2D.MirrorX,
-    cameraType: 'user'
+    transform: facingMode === 'user' ? Transform2D.MirrorX : Transform2D.None,
+    cameraType: facingMode
   });
 
   await session.setSource(cameraSource);
