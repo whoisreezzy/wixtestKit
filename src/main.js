@@ -9,8 +9,8 @@ let session, liveCanvas;
 
 const isMobile = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-if (!isMobile) {
-  document.getElementById('switch-camera-btn')?.style.setProperty('display', 'none');
+if (isMobile) {
+  document.getElementById('switch-camera-btn')?.style.setProperty('display', 'block');
 }
 
 async function initializeCameraKit() {
