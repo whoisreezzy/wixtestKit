@@ -1,4 +1,5 @@
 import { bootstrapCameraKit, createMediaStreamSource, Transform2D } from '@snap/camera-kit';
+import { createFFmpeg, fetchFile } from '@ffmpeg/ffmpeg';
 
 const API_TOKEN = 'eyJhbGciOiJIUzI1NiIsImtpZCI6IkNhbnZhc1MyU0hNQUNQcm9kIiwidHlwIjoiSldUIn0.eyJhdWQiOiJjYW52YXMtY2FudmFzYXBpIiwiaXNzIjoiY2FudmFzLXMyc3Rva2VuIiwibmJmIjoxNzQ1ODUyMzQ2LCJzdWIiOiIzYjNjZWVjNy1iNWY2LTQxNDUtOTZiYy0wYWE3ZDJkNDJjOGZ-U1RBR0lOR343NDlkNThlYy1hMDFkLTQwYzgtYTAyYi1mZmVjMjJmYzU0YWEifQ.HBMfpeAj-jddS_0D7t1ZS6WO_bHFBGRgC4VZLw8sBlU';
 const LENS_GROUP_ID = 'f01d35c1-cfc6-4960-b3c9-de2ce373053a';
@@ -8,16 +9,15 @@ let facingMode = 'user';
 let session, liveCanvas;
 
 const isMobile = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-if (isMobile) {
+if (!isMobile) {
+  document.getElementById('switch-camera-btn')?.style.setProperty('display', 'none');
+} else {
   document.getElementById('switch-camera-btn')?.style.setProperty('display', 'block');
 }
 
 async function initializeCameraKit() {
   const cameraKit = await bootstrapCameraKit({ apiToken: API_TOKEN });
   session = await cameraKit.createSession();
-  session.events.addEventListener('error', e => console.error('CameraKit Error:', e.detail));
-
   await startCamera();
 
   const lens = await cameraKit.lensRepository.loadLens(LENS_ID, LENS_GROUP_ID);
@@ -55,69 +55,51 @@ async function startCamera() {
 
 function setupCaptureLogic() {
   const captureBtn = document.getElementById('capture-btn');
-  let mediaRecorder, recordedChunks = [], pressTimer, recordingStarted = false;
-
-  const takePhoto = () => {
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = liveCanvas.width;
-    tempCanvas.height = liveCanvas.height;
-    tempCanvas.getContext('2d').drawImage(liveCanvas, 0, 0);
-    const image = tempCanvas.toDataURL('image/png');
-    const a = document.createElement('a');
-    a.href = image; a.download = 'snap-photo.png'; a.click();
-  };
-
-  let recordingTimeout;
+  let mediaRecorder, recordedChunks = [], recordingTimeout;
 
   const startRecording = () => {
     const stream = liveCanvas.captureStream(30);
     mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
     recordedChunks = [];
-  
+
     mediaRecorder.ondataavailable = e => {
       if (e.data.size > 0) recordedChunks.push(e.data);
     };
-  
-    mediaRecorder.onstop = () => {
-      clearTimeout(recordingTimeout); // safety
+
+    mediaRecorder.onstop = async () => {
+      clearTimeout(recordingTimeout);
       const blob = new Blob(recordedChunks, { type: 'video/webm' });
-      const url = URL.createObjectURL(blob);
+      const mp4Blob = await convertWebmToMp4(blob);
+
       const a = document.createElement('a');
-      a.href = url;
-      a.download = 'snap-video.webm';
+      a.href = URL.createObjectURL(mp4Blob);
+      a.download = 'converted.mp4';
       a.click();
-      URL.revokeObjectURL(url);
+      URL.revokeObjectURL(a.href);
     };
-  
+
     mediaRecorder.start();
-  
-    // ⏱ Авто-стоп через 15 сек
     recordingTimeout = setTimeout(() => {
       if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
     }, 15000);
-  
     captureBtn.classList.add('recording');
   };
 
-  const stopRecording = () => {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      mediaRecorder.stop();
-      captureBtn.classList.remove('recording');
-    }
-  };
+  captureBtn.addEventListener('click', () => {
+    startRecording();
+  });
+}
 
-  const startPress = () => pressTimer = setTimeout(() => { recordingStarted = true; startRecording() }, 300);
-  const endPress = () => {
-    clearTimeout(pressTimer);
-    if (recordingStarted) { stopRecording(); recordingStarted = false } else takePhoto();
-  };
+async function convertWebmToMp4(webmBlob) {
+  const ffmpeg = createFFmpeg({ log: true });
+  await ffmpeg.load();
 
-  captureBtn.addEventListener('mousedown', startPress);
-  captureBtn.addEventListener('mouseup', endPress);
-  captureBtn.addEventListener('mouseleave', () => clearTimeout(pressTimer));
-  captureBtn.addEventListener('touchstart', e => { e.preventDefault(); startPress() }, { passive: false });
-  captureBtn.addEventListener('touchend', e => { e.preventDefault(); endPress() }, { passive: false });
-  captureBtn.addEventListener('touchcancel', () => clearTimeout(pressTimer));
+  const webmBuffer = await fetchFile(webmBlob);
+  ffmpeg.FS('writeFile', 'input.webm', webmBuffer);
+  await ffmpeg.run('-i', 'input.webm', '-c:v', 'libx264', '-preset', 'ultrafast', 'output.mp4');
+  const mp4Data = ffmpeg.FS('readFile', 'output.mp4');
+
+  return new Blob([mp4Data.buffer], { type: 'video/mp4' });
 }
 
 document.getElementById('switch-camera-btn')?.addEventListener('click', async () => {
