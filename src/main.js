@@ -4,6 +4,8 @@ const API_TOKEN = 'eyJhbGciOiJIUzI1NiIsImtpZCI6IkNhbnZhc1MyU0hNQUNQcm9kIiwidHlwI
 const LENS_GROUP_ID = 'f01d35c1-cfc6-4960-b3c9-de2ce373053a';
 const LENS_ID = '5023539e-5104-4286-85a6-936c2ad2d911';
 
+
+
 async function startCameraKit() {
   const cameraKit = await bootstrapCameraKit({ apiToken: API_TOKEN });
   const session = await cameraKit.createSession();
@@ -32,28 +34,39 @@ async function startCameraKit() {
   const canvasContainer = document.getElementById('canvas-container');
   canvasContainer.innerHTML = '';
   const liveCanvas = session.output.live;
-
-  // ✅ Без scale, просто 100% экрана
-  const aspectRatio = mediaStream.getVideoTracks()[0].getSettings().width / mediaStream.getVideoTracks()[0].getSettings().height;
-  const isPortrait = window.innerHeight > window.innerWidth;
-  
-  if (isPortrait) {
-    liveCanvas.style.width = '100vw';
-    liveCanvas.style.height = (100 / aspectRatio) + 'vw';
-  } else {
-    liveCanvas.style.height = '100vh';
-    liveCanvas.style.width = (100 * aspectRatio) + 'vh';
-  }
-  liveCanvas.style.transform = 'none';
-  liveCanvas.style.transformOrigin = 'top left';
-
   canvasContainer.appendChild(liveCanvas);
 
+  // 🧠 Функция поворота canvas на телефоне
+  function rotateForMobile() {
+    const isPortrait = window.innerHeight > window.innerWidth;
+
+    if (isPortrait) {
+      liveCanvas.style.position = 'absolute';
+      liveCanvas.style.top = '0';
+      liveCanvas.style.left = '0';
+      liveCanvas.style.width = window.innerHeight + 'px';
+      liveCanvas.style.height = window.innerWidth + 'px';
+      liveCanvas.style.transform = 'rotate(90deg)';
+      liveCanvas.style.transformOrigin = 'center center';
+    } else {
+      liveCanvas.style.position = 'absolute';
+      liveCanvas.style.top = '0';
+      liveCanvas.style.left = '0';
+      liveCanvas.style.width = '100vw';
+      liveCanvas.style.height = '100vh';
+      liveCanvas.style.transform = 'none';
+    }
+  }
+
+  rotateForMobile();
+  window.addEventListener('resize', rotateForMobile);
+
+  // 🎭 Загрузка линзы
   const lens = await cameraKit.lensRepository.loadLens(LENS_ID, LENS_GROUP_ID);
   if (lens) await session.applyLens(lens);
   await session.play();
 
-  // === Кнопка захвата: фото/видео ===
+  // === Кнопка захвата ===
   const captureBtn = document.getElementById('capture-btn');
 
   let mediaRecorder = null;
@@ -62,7 +75,12 @@ async function startCameraKit() {
   let recordingStarted = false;
 
   const takePhoto = () => {
-    const image = liveCanvas.toDataURL('image/png');
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = liveCanvas.width;
+    tempCanvas.height = liveCanvas.height;
+    const ctx = tempCanvas.getContext('2d');
+    ctx.drawImage(liveCanvas, 0, 0);
+    const image = tempCanvas.toDataURL('image/png');
     const a = document.createElement('a');
     a.href = image;
     a.download = 'snap-photo.png';
@@ -116,12 +134,10 @@ async function startCameraKit() {
     }
   }
 
-  // 🎯 События мыши
   captureBtn.addEventListener('mousedown', startPress);
   captureBtn.addEventListener('mouseup', endPress);
   captureBtn.addEventListener('mouseleave', () => clearTimeout(pressTimer));
 
-  // 📱 События касания (тач)
   captureBtn.addEventListener('touchstart', (e) => {
     e.preventDefault();
     startPress();
