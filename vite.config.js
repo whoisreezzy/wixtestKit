@@ -1,3 +1,6 @@
 export default {
-  base: "./",
+  optimizeDeps: {
+    include: ['@ffmpeg/ffmpeg'],
+  },
+  base: './',
 };
