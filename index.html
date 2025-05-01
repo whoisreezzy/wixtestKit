@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Snap Camera Kit Capture</title>
+
   <style>
     html, body {
       margin: 0;
@@ -20,30 +20,39 @@
     }
 
     canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 
-    #capture-btn {
-      position: fixed;
-      bottom: 30px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 70px;
-      height: 70px;
-      border-radius: 50%;
-      border: none;
-      background: white;
-      z-index: 9999;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
+#capture-btn {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: none;
+  background: white;
+  z-index: 9999;
+  cursor: pointer;
+  transition: background 0.2s;
+  opacity: 0.9;
+}
 
-    #capture-btn.recording {
-      background: red;
-    }
+#capture-btn.recording {
+  background: red;
+}
+
+/* 📱 Больше кнопка на телефонах */
+@media (max-width: 600px) {
+  #capture-btn {
+    width: 100px;
+    height: 100px;
+  }
+}
   </style>
 </head>
 <body>

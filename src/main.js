@@ -4,14 +4,23 @@ const API_TOKEN = 'eyJhbGciOiJIUzI1NiIsImtpZCI6IkNhbnZhc1MyU0hNQUNQcm9kIiwidHlwI
 const LENS_GROUP_ID = 'f01d35c1-cfc6-4960-b3c9-de2ce373053a';
 const LENS_ID = '5023539e-5104-4286-85a6-936c2ad2d911';
 
-let mediaRecorder = null;
-let recordedChunks = [];
-
 async function startCameraKit() {
   const cameraKit = await bootstrapCameraKit({ apiToken: API_TOKEN });
   const session = await cameraKit.createSession();
 
-  const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+  session.events.addEventListener('error', (event) => {
+    console.error('CameraKit Error:', event.detail);
+  });
+
+  const mediaStream = await navigator.mediaDevices.getUserMedia({
+    video: {
+      width: { ideal: 1920 },
+      height: { ideal: 1080 },
+      facingMode: 'user'
+    },
+    audio: false
+  });
+
   const cameraSource = createMediaStreamSource(mediaStream, {
     transform: Transform2D.MirrorX,
     cameraType: 'user',
@@ -21,18 +30,38 @@ async function startCameraKit() {
   const canvasContainer = document.getElementById('canvas-container');
   canvasContainer.innerHTML = '';
   const liveCanvas = session.output.live;
+
+  const scale = window.devicePixelRatio || 1;
+  liveCanvas.style.width = window.innerWidth * scale + 'px';
+  liveCanvas.style.height = window.innerHeight * scale + 'px';
+  liveCanvas.style.transform = 'scale(' + 1 / scale + ')';
+  liveCanvas.style.transformOrigin = 'top left';
+
+  function resizeCanvas() {
+    const scale = window.devicePixelRatio || 1;
+    liveCanvas.style.width = window.innerWidth * scale + 'px';
+    liveCanvas.style.height = window.innerHeight * scale + 'px';
+    liveCanvas.style.transform = 'scale(' + 1 / scale + ')';
+    liveCanvas.style.transformOrigin = 'top left';
+  }
+
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
   canvasContainer.appendChild(liveCanvas);
 
   const lens = await cameraKit.lensRepository.loadLens(LENS_ID, LENS_GROUP_ID);
-  if (lens) {
-    await session.applyLens(lens);
-  }
-
+  if (lens) await session.applyLens(lens);
   await session.play();
 
+  // === Capture button logic ===
   const captureBtn = document.getElementById('capture-btn');
 
-  // 📸 Снимок
+  let mediaRecorder = null;
+  let recordedChunks = [];
+  let pressTimer = null;
+  let recordingStarted = false;
+
   const takePhoto = () => {
     const image = liveCanvas.toDataURL('image/png');
     const a = document.createElement('a');
@@ -41,7 +70,6 @@ async function startCameraKit() {
     a.click();
   };
 
-  // 🎥 Видео
   const startRecording = () => {
     const canvasStream = liveCanvas.captureStream(30);
     mediaRecorder = new MediaRecorder(canvasStream, { mimeType: 'video/webm' });
@@ -72,17 +100,14 @@ async function startCameraKit() {
     }
   };
 
-  let pressTimer = null;
-  let recordingStarted = false;
-
-  captureBtn.addEventListener('mousedown', () => {
+  function startPress() {
     pressTimer = setTimeout(() => {
       recordingStarted = true;
       startRecording();
     }, 300);
-  });
+  }
 
-  captureBtn.addEventListener('mouseup', () => {
+  function endPress() {
     clearTimeout(pressTimer);
     if (recordingStarted) {
       stopRecording();
@@ -90,16 +115,25 @@ async function startCameraKit() {
     } else {
       takePhoto();
     }
-  });
+  }
 
-  captureBtn.addEventListener('mouseleave', () => {
-    if (recordingStarted) {
-      stopRecording();
-      recordingStarted = false;
-    } else {
-      clearTimeout(pressTimer);
-    }
-  });
+  // Desktop events
+  captureBtn.addEventListener('mousedown', startPress);
+  captureBtn.addEventListener('mouseup', endPress);
+  captureBtn.addEventListener('mouseleave', () => clearTimeout(pressTimer));
+
+  // Mobile touch events
+  captureBtn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    startPress();
+  }, { passive: false });
+
+  captureBtn.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    endPress();
+  }, { passive: false });
+
+  captureBtn.addEventListener('touchcancel', () => clearTimeout(pressTimer));
 }
 
 startCameraKit().catch(console.error);
