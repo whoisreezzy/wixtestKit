@@ -7,7 +7,7 @@ const LENS_ID = '5023539e-5104-4286-85a6-936c2ad2d911';
 
 let facingMode = 'user';
 let session, liveCanvas;
-
+console.log('ffmpeg version')
 const isMobile = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
 if (!isMobile) {
   document.getElementById('switch-camera-btn')?.style.setProperty('display', 'none');
@@ -70,6 +70,7 @@ function setupCaptureLogic() {
       clearTimeout(recordingTimeout);
       const blob = new Blob(recordedChunks, { type: 'video/webm' });
       const mp4Blob = await convertWebmToMp4(blob);
+      console.log('🎥 MP4 blob:', mp4Blob);
 
       const a = document.createElement('a');
       a.href = URL.createObjectURL(mp4Blob);
@@ -93,11 +94,17 @@ function setupCaptureLogic() {
 async function convertWebmToMp4(webmBlob) {
   const ffmpeg = createFFmpeg({ log: true });
   await ffmpeg.load();
+console.log('✅ ffmpeg загружен');
 
-  const webmBuffer = await fetchFile(webmBlob);
-  ffmpeg.FS('writeFile', 'input.webm', webmBuffer);
-  await ffmpeg.run('-i', 'input.webm', '-c:v', 'libx264', '-preset', 'ultrafast', 'output.mp4');
-  const mp4Data = ffmpeg.FS('readFile', 'output.mp4');
+const webmBuffer = await fetchFile(webmBlob);
+ffmpeg.FS('writeFile', 'input.webm', webmBuffer);
+console.log('✅ input.webm записан');
+
+await ffmpeg.run('-i', 'input.webm', '-c:v', 'libx264', '-preset', 'ultrafast', 'output.mp4');
+console.log('✅ output.mp4 создан');
+
+const mp4Data = ffmpeg.FS('readFile', 'output.mp4');
+console.log('📦 mp4 файл готов', mp4Data);
 
   return new Blob([mp4Data.buffer], { type: 'video/mp4' });
 }
