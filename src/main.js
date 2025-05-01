@@ -37,29 +37,29 @@ async function startCameraKit() {
   canvasContainer.appendChild(liveCanvas);
 
   // 🧠 Функция поворота canvas на телефоне
-  function rotateForMobile() {
-    const isPortrait = window.innerHeight > window.innerWidth;
-
-    if (isPortrait) {
+  function applyOrientation() {
+    const orientation = window.screen.orientation?.angle || window.orientation || 0;
+  
+    if (orientation === 90 || orientation === -90) {
+      // Ландшафт: горизонтальное устройство
+      liveCanvas.style.transform = 'rotate(0deg)';
+      liveCanvas.style.width = '100vw';
+      liveCanvas.style.height = '100vh';
+    } else {
+      // Портрет: вертикальное устройство — ПОВЕРНУТЬ на 90°
+      liveCanvas.style.transform = 'rotate(90deg)';
+      liveCanvas.style.transformOrigin = 'center center';
       liveCanvas.style.position = 'absolute';
       liveCanvas.style.top = '0';
       liveCanvas.style.left = '0';
       liveCanvas.style.width = window.innerHeight + 'px';
       liveCanvas.style.height = window.innerWidth + 'px';
-      liveCanvas.style.transform = 'rotate(90deg)';
-      liveCanvas.style.transformOrigin = 'center center';
-    } else {
-      liveCanvas.style.position = 'absolute';
-      liveCanvas.style.top = '0';
-      liveCanvas.style.left = '0';
-      liveCanvas.style.width = '100vw';
-      liveCanvas.style.height = '100vh';
-      liveCanvas.style.transform = 'none';
     }
   }
 
-  rotateForMobile();
-  window.addEventListener('resize', rotateForMobile);
+  applyOrientation();
+  window.addEventListener('orientationchange', applyOrientation);
+  window.addEventListener('resize', applyOrientation);
 
   // 🎭 Загрузка линзы
   const lens = await cameraKit.lensRepository.loadLens(LENS_ID, LENS_GROUP_ID);
