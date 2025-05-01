@@ -12,8 +12,8 @@ async function startCameraKit() {
     console.error('CameraKit Error:', event.detail);
   });
 
+  // 📱 Динамическое разрешение камеры
   const isMobile = window.innerWidth < 768;
-
   const mediaStream = await navigator.mediaDevices.getUserMedia({
     video: {
       width: { ideal: isMobile ? 720 : 1920 },
@@ -33,22 +33,11 @@ async function startCameraKit() {
   canvasContainer.innerHTML = '';
   const liveCanvas = session.output.live;
 
-  const scale = window.devicePixelRatio || 1;
-  liveCanvas.style.width = window.innerWidth * scale + 'px';
-  liveCanvas.style.height = window.innerHeight * scale + 'px';
-  liveCanvas.style.transform = 'scale(' + 1 / scale + ')';
+  // ✅ Без scale, просто 100% экрана
+  liveCanvas.style.width = '100vw';
+  liveCanvas.style.height = '100vh';
+  liveCanvas.style.transform = 'none';
   liveCanvas.style.transformOrigin = 'top left';
-
-  function resizeCanvas() {
-    const scale = window.devicePixelRatio || 1;
-    liveCanvas.style.width = window.innerWidth * scale + 'px';
-    liveCanvas.style.height = window.innerHeight * scale + 'px';
-    liveCanvas.style.transform = 'scale(' + 1 / scale + ')';
-    liveCanvas.style.transformOrigin = 'top left';
-  }
-
-  resizeCanvas();
-  window.addEventListener('resize', resizeCanvas);
 
   canvasContainer.appendChild(liveCanvas);
 
@@ -56,7 +45,7 @@ async function startCameraKit() {
   if (lens) await session.applyLens(lens);
   await session.play();
 
-  // === Capture button logic ===
+  // === Кнопка захвата: фото/видео ===
   const captureBtn = document.getElementById('capture-btn');
 
   let mediaRecorder = null;
@@ -119,12 +108,12 @@ async function startCameraKit() {
     }
   }
 
-  // Desktop events
+  // 🎯 События мыши
   captureBtn.addEventListener('mousedown', startPress);
   captureBtn.addEventListener('mouseup', endPress);
   captureBtn.addEventListener('mouseleave', () => clearTimeout(pressTimer));
 
-  // Mobile touch events
+  // 📱 События касания (тач)
   captureBtn.addEventListener('touchstart', (e) => {
     e.preventDefault();
     startPress();
