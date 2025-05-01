@@ -34,8 +34,16 @@ async function startCameraKit() {
   const liveCanvas = session.output.live;
 
   // ✅ Без scale, просто 100% экрана
-  liveCanvas.style.width = '100vw';
-  liveCanvas.style.height = '100vh';
+  const aspectRatio = mediaStream.getVideoTracks()[0].getSettings().width / mediaStream.getVideoTracks()[0].getSettings().height;
+  const isPortrait = window.innerHeight > window.innerWidth;
+  
+  if (isPortrait) {
+    liveCanvas.style.width = '100vw';
+    liveCanvas.style.height = (100 / aspectRatio) + 'vw';
+  } else {
+    liveCanvas.style.height = '100vh';
+    liveCanvas.style.width = (100 * aspectRatio) + 'vh';
+  }
   liveCanvas.style.transform = 'none';
   liveCanvas.style.transformOrigin = 'top left';
 
