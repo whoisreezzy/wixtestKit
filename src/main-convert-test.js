@@ -1,10 +1,6 @@
 import { bootstrapCameraKit, createMediaStreamSource, Transform2D } from '@snap/camera-kit';
 
-/**
- * Динамически загружает скрипт ffmpeg.wasm из CDN, если он ещё не загружен.
- * После загрузки будет доступна функция createFFmpeg для конвертации.
- * @returns {Promise<void>} Разрешается после успешной загрузки скрипта.
- */
+// Load ffmpeg.wasm via CDN if not already loaded
 async function loadFFmpegScript() {
   if (window.FFmpeg && typeof FFmpeg.createFFmpeg === 'function') return;
   return new Promise((resolve, reject) => {
@@ -20,20 +16,15 @@ const API_TOKEN = 'eyJhbGciOiJIUzI1NiIsImtpZCI6IkNhbnZhc1MyU0hNQUNQcm9kIiwidHlwI
 const LENS_GROUP_ID = 'f01d35c1-cfc6-4960-b3c9-de2ce373053a';
 const LENS_ID = '5023539e-5104-4286-85a6-936c2ad2d911';
 
-// Глобальные переменные
 let facingMode = 'user';
 let session, liveCanvas;
 let originalMediaStream;
-let timerEl, timerInterval;
 
-/**
- * Инициализирует SDK Snap CameraKit:
- * - Запускает SDK с API-токеном
- * - Создаёт сессию камеры
- * - Запускает видеопоток и аудио
- * - Загружает и применяет линзу
- * - Запускает рендер и настраивает логику захвата
- */
+const isMobile = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
+if (isMobile) {
+  document.getElementById('switch-camera-btn')?.style.setProperty('display', 'block');
+}
+
 async function initializeCameraKit() {
   const cameraKit = await bootstrapCameraKit({ apiToken: API_TOKEN });
   session = await cameraKit.createSession();
@@ -48,15 +39,13 @@ async function initializeCameraKit() {
   setupCaptureLogic();
 }
 
-/**
- * Запускает (или перезапускает) камеру с текущим режимом (фронт/задняя):
- * - Запрашивает видео (1080p) и аудио через getUserMedia
- * - Создаёт источник для CameraKit с зеркальным отображением для фронтальной
- * - Вставляет полученный canvas в DOM
- */
 async function startCamera() {
   const mediaStream = await navigator.mediaDevices.getUserMedia({
-    video: { width: { ideal: 1920 }, height: { ideal: 1080 }, facingMode },
+    video: {
+      width: { ideal: 1920 },
+      height: { ideal: 1080 },
+      facingMode
+    },
     audio: true
   });
   originalMediaStream = mediaStream;
@@ -77,17 +66,9 @@ async function startCamera() {
   canvasContainer.appendChild(liveCanvas);
 }
 
-/**
- * Настраивает логику кнопки захвата:
- * - Один клик для фото
- * - Длительное нажатие для записи видео (до 15 с)
- * - Объединяет видео-кадры с аудио-потоком
- * - Обрабатывает события mediaRecorder для сбора данных и скачивания
- */
 function setupCaptureLogic() {
   const captureBtn = document.getElementById('capture-btn');
   let mediaRecorder, recordedChunks = [], pressTimer, recordingStarted = false;
-  let seconds = 0;
 
   const takePhoto = () => {
     const tempCanvas = document.createElement('canvas');
@@ -98,6 +79,8 @@ function setupCaptureLogic() {
     const a = document.createElement('a');
     a.href = image; a.download = 'snap-photo.png'; a.click();
   };
+
+  let recordingTimeout;
 
   const startRecording = () => {
     const canvasStream = liveCanvas.captureStream(30);
@@ -111,23 +94,13 @@ function setupCaptureLogic() {
       audioBitsPerSecond: 128000
     });
     recordedChunks = [];
-    seconds = 0;
 
-    // Запуск таймера отображения
-    timerEl.textContent = '00:00';
-    timerEl.style.display = 'block';
-    timerInterval = setInterval(() => {
-      seconds++;
-      const m = Math.floor(seconds / 60);
-      const s = seconds % 60;
-      timerEl.textContent = `${m < 10 ? '0' + m : m}:${s < 10 ? '0' + s : s}`;
-    }, 1000);
+    mediaRecorder.ondataavailable = e => {
+      if (e.data.size > 0) recordedChunks.push(e.data);
+    };
 
-    mediaRecorder.ondataavailable = e => { if (e.data.size) recordedChunks.push(e.data) };
     mediaRecorder.onstop = async () => {
       clearTimeout(recordingTimeout);
-      clearInterval(timerInterval);
-      timerEl.style.display = 'none';
       const webmBlob = new Blob(recordedChunks, { type: 'video/webm' });
       const mp4Blob = await convertWebmToMp4(webmBlob);
       const a = document.createElement('a');
@@ -138,7 +111,10 @@ function setupCaptureLogic() {
     };
 
     mediaRecorder.start();
-    recordingTimeout = setTimeout(() => { if (mediaRecorder.state !== 'inactive') mediaRecorder.stop() }, 15000);
+    recordingTimeout = setTimeout(() => {
+      if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+    }, 15000);
+
     captureBtn.classList.add('recording');
   };
 
@@ -168,59 +144,34 @@ document.getElementById('switch-camera-btn')?.addEventListener('click', async ()
   await startCamera();
 });
 
-/**
- * Конвертирует WebM Blob в MP4 с помощью ffmpeg.wasm:
- * - Убеждается, что скрипт ffmpeg загружен
- * - Записывает WebM-данные в файловую систему ffmpeg
- * - Запускает ffmpeg для транскодирования в H.264 MP4
- * - Возвращает полученный MP4 в виде Blob
- * @param {Blob} webmBlob - Записанный WebM Blob
- * @returns {Promise<Blob>} Конвертированный MP4 Blob
- */
 async function convertWebmToMp4(webmBlob) {
+  // ensure ffmpeg is loaded
   await loadFFmpegScript();
   const ffmpeg = FFmpeg.createFFmpeg({ log: true });
   await ffmpeg.load();
 
+  // write webm data
   const webmData = await webmBlob.arrayBuffer();
   ffmpeg.FS('writeFile', 'input.webm', new Uint8Array(webmData));
 
+  // convert to mp4
   await ffmpeg.run(
     '-i', 'input.webm',
-    '-r', '30',
+    '-r', '30',     
     '-c:v', 'libx264',
-    '-b:v', '4.5M',
+    '-b:v', '4.5M', 
     '-preset', 'ultrafast',
     'output.mp4'
   );
 
+  // read result
   const mp4Data = ffmpeg.FS('readFile', 'output.mp4');
   return new Blob([mp4Data.buffer], { type: 'video/mp4' });
 }
 
-/**
- * Ожидает загрузки DOM и скрипта ffmpeg,
- * затем запускает инициализацию CameraKit.
- */
-window.addEventListener('DOMContentLoaded', async () => {
-  // Создаём элемент для отображения времени записи
-  timerEl = document.createElement('div');
-  timerEl.id = 'recording-timer';
-  Object.assign(timerEl.style, {
-    display: 'none',
-    position: 'fixed',
-    top: '10px',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    color: '#fff',
-    fontSize: '18px',
-    zIndex: '1001',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    padding: '4px 8px',
-    borderRadius: '4px'
-  });
-  document.body.appendChild(timerEl);
 
+// Wait for the ffmpeg script to load, then initialize CameraKit
+window.addEventListener('DOMContentLoaded', async () => {
   try {
     await loadFFmpegScript();
   } catch (e) {
