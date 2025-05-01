@@ -12,10 +12,12 @@ async function startCameraKit() {
     console.error('CameraKit Error:', event.detail);
   });
 
+  const isMobile = window.innerWidth < 768;
+
   const mediaStream = await navigator.mediaDevices.getUserMedia({
     video: {
-      width: { ideal: 1920 },
-      height: { ideal: 1080 },
+      width: { ideal: isMobile ? 720 : 1920 },
+      height: { ideal: isMobile ? 1280 : 1080 },
       facingMode: 'user'
     },
     audio: false
