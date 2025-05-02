@@ -1,5 +1,8 @@
 import { bootstrapCameraKit, createMediaStreamSource, Transform2D } from '@snap/camera-kit';
 
+let timerEl;
+let timerInterval;
+
 // Load ffmpeg.wasm via CDN if not already loaded
 async function loadFFmpegScript() {
   if (window.FFmpeg && typeof FFmpeg.createFFmpeg === 'function') return;
@@ -95,12 +98,33 @@ function setupCaptureLogic() {
     });
     recordedChunks = [];
 
+    // Показать таймер в формате “0s”…“15s”
+    let seconds = 0;
+    timerEl.textContent = `${seconds}`;
+    timerEl.style.display = 'block';
+    timerInterval = setInterval(() => {
+      seconds++;
+      timerEl.textContent = `${seconds}`;
+      if (seconds >= 15) {
+        clearInterval(timerInterval);
+        timerEl.style.display = 'none';
+        stopRecording();
+      }
+    }, 1000);
+
     mediaRecorder.ondataavailable = e => {
       if (e.data.size > 0) recordedChunks.push(e.data);
     };
 
     mediaRecorder.onstop = async () => {
       clearTimeout(recordingTimeout);
+      captureBtn.classList.remove('recording');
+      recordingStarted = false;
+
+      // Hide and clear the timer
+      clearInterval(timerInterval);
+      timerEl.style.display = 'none';
+
       const webmBlob = new Blob(recordedChunks, { type: 'video/webm' });
       const mp4Blob = await convertWebmToMp4(webmBlob);
       const a = document.createElement('a');
@@ -111,8 +135,9 @@ function setupCaptureLogic() {
     };
 
     mediaRecorder.start();
+    // Авто-стоп через 15 секунд, включая сброс UI и флагов
     recordingTimeout = setTimeout(() => {
-      if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+      stopRecording();
     }, 15000);
 
     captureBtn.classList.add('recording');
@@ -122,6 +147,12 @@ function setupCaptureLogic() {
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {
       mediaRecorder.stop();
       captureBtn.classList.remove('recording');
+      recordingStarted = false;
+      clearTimeout(recordingTimeout);
+
+      // Hide and clear the timer
+      clearInterval(timerInterval);
+      timerEl.style.display = 'none';
     }
   };
 
@@ -159,7 +190,7 @@ async function convertWebmToMp4(webmBlob) {
     '-i', 'input.webm',
     '-r', '30',     
     '-c:v', 'libx264',
-    '-b:v', '4.5M', 
+    '-b:v', '5M', 
     '-preset', 'ultrafast',
     'output.mp4'
   );
@@ -177,5 +208,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   } catch (e) {
     console.error('FFmpeg load error:', e);
   }
+  timerEl = document.getElementById('record-timer');
   initializeCameraKit().catch(console.error);
 });
