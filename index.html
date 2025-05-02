@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <title>CameraKit</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport"
+  content="width=device-width,
+           initial-scale=1.0,
+           maximum-scale=1.0,
+           user-scalable=no" />
   <style>
     html, body {
       margin: 0;
@@ -53,8 +57,8 @@
 
     #switch-camera-btn {
       position: fixed;
-      top: 20px;
-      right: 20px;
+      top: 30px;
+      right: 25px;
       background: rgba(255, 255, 255, 0.6);
       border: none;
       font-size: 28px;
@@ -104,10 +108,10 @@
   <button id="switch-camera-btn" style="display: none;">🔃</button>
     <!-- Кнопка вспышки/подсветки -->
     <button id="flash-btn" style="
-    display: none;
+
     position: fixed;
     top: 100px;
-    right: 20px;
+    right: 25px;
     width: 50px;
     height: 50px;
     border-radius: 50%;
@@ -118,6 +122,22 @@
     z-index: 1000;
   ">🔦</button>
 
+  <!-- Кнопка «Художник»: открывает whoisreezzy.com -->
+  <button id="painter-btn" style="
+    display: none;
+    position: fixed;
+    top: 170px;          
+    right: 25px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.6);
+    font-size: 24px;
+    cursor: pointer;
+    z-index: 1000;
+  ">👨‍🎨</button>
+
   <!-- Оверлей для экранной подсветки -->
   <div id="screen-flash" style="
     display: none;
@@ -127,7 +147,7 @@
     background: #fff;
     opacity: 0.6;
     pointer-events: none;
-    z-index: 900;
+    z-index: 8  00;
   "></div>
   <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
 

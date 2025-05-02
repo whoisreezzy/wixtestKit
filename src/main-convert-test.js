@@ -58,7 +58,7 @@ async function startCamera() {
   const capabilities = videoTrack.getCapabilities();
   supportsTorch = !!capabilities.torch;
   flashBtn.style.display = 'block';
-  flashBtn.style.background = flashOn ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.8)';
+  flashBtn.style.background = flashOn ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.6)';
 
   const cameraSource = createMediaStreamSource(mediaStream, {
     transform: facingMode === 'user' ? Transform2D.MirrorX : Transform2D.None,
@@ -190,6 +190,19 @@ function setupCaptureLogic() {
 document.getElementById('switch-camera-btn')?.addEventListener('click', async () => {
   facingMode = (facingMode === 'user') ? 'environment' : 'user';
   await startCamera();
+
+  // Сброс состояния вспышки при смене камеры
+  flashOn = false;
+  flashBtn.style.background = 'rgba(255,255,255,0.6)';
+  screenFlash.style.display = 'none';
+  if (supportsTorch) {
+    try {
+      await originalMediaStream.getVideoTracks()[0]
+        .applyConstraints({ advanced: [{ torch: false }] });
+    } catch (e) {
+      console.warn('Не удалось сбросить torch при смене камеры:', e);
+    }
+  }
 });
 
 async function convertWebmToMp4(webmBlob) {
@@ -228,9 +241,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.error('FFmpeg load error:', e);
   }
   timerEl = document.getElementById('record-timer');
-  // Инициализация кнопки вспышки и подсветки
+  // Инициализация кнопок
   flashBtn     = document.getElementById('flash-btn');
   screenFlash  = document.getElementById('screen-flash');
+  const painterBtn = document.getElementById('painter-btn');
+
   // Инициализируем CameraKit
   initializeCameraKit().catch(console.error);
 
@@ -279,5 +294,11 @@ window.addEventListener('DOMContentLoaded', async () => {
       // Фallback – экранная подсветка
       screenFlash.style.display = flashOn ? 'block' : 'none';
     }
+  });
+
+  // Показываем и обрабатываем кнопку художника
+  painterBtn.style.display = 'block';
+  painterBtn.addEventListener('click', () => {
+    window.open('https://whoisreezzy.com', '_blank');
   });
 });
