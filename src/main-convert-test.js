@@ -223,12 +223,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     timerEl = document.getElementById('record-timer');
     initializeCameraKit().catch(console.error);
   
-    // Кнопка «Поделиться фото»
     const sharePhotoBtn = document.getElementById('share-photo-btn');
-    // Проверяем поддержку Web Share API для файлов
-    if (navigator.canShare && navigator.canShare({
-      files: [new File([], 'test.png', { type: 'image/png' })]
-    })) {
+    // Показываем кнопку, если поддерживается базовый Web Share API
+    if (navigator.share) {
       sharePhotoBtn.style.display = 'block';
       sharePhotoBtn.addEventListener('click', async () => {
         // Захват кадра
@@ -236,14 +233,26 @@ window.addEventListener('DOMContentLoaded', async () => {
         tempCanvas.width = liveCanvas.width;
         tempCanvas.height = liveCanvas.height;
         tempCanvas.getContext('2d').drawImage(liveCanvas, 0, 0);
-        // Конвертация canvas → Blob
         tempCanvas.toBlob(async (blob) => {
           if (!blob) return;
           const file = new File([blob], 'snap-photo.png', { type: 'image/png' });
           try {
-            await navigator.share({ files: [file] });
+            // Пытаемся поделиться файлом, если поддерживается
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+              await navigator.share({ files: [file] });
+            } else {
+              // fallback: share only text or URL, or just download
+              await navigator.share({ title: 'Снимок', text: 'Моё фото', url: URL.createObjectURL(blob) });
+            }
           } catch (err) {
             console.error('Ошибка Web Share для фото:', err);
+            // окончательный fallback: скачивание
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'snap-photo.png';
+            a.click();
+            URL.revokeObjectURL(url);
           }
         }, 'image/png');
       });
