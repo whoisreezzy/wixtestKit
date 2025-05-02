@@ -213,50 +213,39 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
   timerEl = document.getElementById('record-timer');
 
-  window.addEventListener('DOMContentLoaded', async () => {
-    try {
-      await loadFFmpegScript();
-    } catch (e) {
-      console.error('FFmpeg load error:', e);
-    }
-  
-    timerEl = document.getElementById('record-timer');
-    initializeCameraKit().catch(console.error);
-  
-    const sharePhotoBtn = document.getElementById('share-photo-btn');
-    // Показываем кнопку, если поддерживается базовый Web Share API
-    if (navigator.share) {
-      sharePhotoBtn.style.display = 'block';
-      sharePhotoBtn.addEventListener('click', async () => {
-        // Захват кадра
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = liveCanvas.width;
-        tempCanvas.height = liveCanvas.height;
-        tempCanvas.getContext('2d').drawImage(liveCanvas, 0, 0);
-        tempCanvas.toBlob(async (blob) => {
-          if (!blob) return;
-          const file = new File([blob], 'snap-photo.png', { type: 'image/png' });
-          try {
-            // Пытаемся поделиться файлом, если поддерживается
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-              await navigator.share({ files: [file] });
-            } else {
-              // fallback: share only text or URL, or just download
-              await navigator.share({ title: 'Снимок', text: 'Моё фото', url: URL.createObjectURL(blob) });
-            }
-          } catch (err) {
-            console.error('Ошибка Web Share для фото:', err);
-            // окончательный fallback: скачивание
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'snap-photo.png';
-            a.click();
-            URL.revokeObjectURL(url);
-          }
-        }, 'image/png');
-      });
-    }
-  });
+  // Инициализируем CameraKit
   initializeCameraKit().catch(console.error);
+
+  // Показываем кнопку шаринга фото, если доступен Web Share API
+  const sharePhotoBtn = document.getElementById('share-photo-btn');
+  console.log('navigator.share support:', !!navigator.share);
+  if (navigator.share) {
+    sharePhotoBtn.style.display = 'block';
+    sharePhotoBtn.addEventListener('click', async () => {
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = liveCanvas.width;
+      tempCanvas.height = liveCanvas.height;
+      tempCanvas.getContext('2d').drawImage(liveCanvas, 0, 0);
+      tempCanvas.toBlob(async (blob) => {
+        if (!blob) return;
+        const file = new File([blob], 'snap-photo.png', { type: 'image/png' });
+        try {
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file] });
+          } else {
+            await navigator.share({ title: 'Снимок', url: URL.createObjectURL(blob) });
+          }
+        } catch (err) {
+          console.error('Ошибка Web Share для фото:', err);
+          // fallback на скачивание
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'snap-photo.png';
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      }, 'image/png');
+    });
+  }
 });
