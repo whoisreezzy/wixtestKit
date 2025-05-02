@@ -252,29 +252,36 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Показываем кнопку шаринга фото, если доступен Web Share API
   const sharePhotoBtn = document.getElementById('share-photo-btn');
   console.log('navigator.share support:', !!navigator.share);
-  if (navigator.share) {
-    sharePhotoBtn.style.display = 'block';
-    sharePhotoBtn.addEventListener('click', async () => {
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = liveCanvas.width;
-      tempCanvas.height = liveCanvas.height;
-      tempCanvas.getContext('2d').drawImage(liveCanvas, 0, 0);
+// Показываем кнопку шаринга фото (в том числе в iframe)
+if (navigator.share || window.parent !== window) {
+  sharePhotoBtn.style.display = 'block';
+  sharePhotoBtn.addEventListener('click', async () => {
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = liveCanvas.width;
+    tempCanvas.height = liveCanvas.height;
+    tempCanvas.getContext('2d').drawImage(liveCanvas, 0, 0);
 
-      tempCanvas.toBlob(async (blob) => {
-        if (!blob) return;
-        const file = new File([blob], 'snap-photo.jpg', { type: 'image/jpeg' });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          try {
-            await navigator.share({ files: [file] });
-          } catch (err) {
-            console.error('Ошибка Web Share для фото:', err);
-          }
-        } else {
-          console.warn('Шэринг файлов не поддерживается этим браузером.');
+    tempCanvas.toBlob(async (blob) => {
+      if (!blob) return;
+      const file = new File([blob], 'snap-photo.jpg', { type: 'image/jpeg' });
+      const objectURL = URL.createObjectURL(blob);
+
+      // Если находимся внутри iframe – шлём сообщение родителю
+      if (window.parent !== window) {
+        window.parent.postMessage({ type: 'share-photo', url: objectURL }, '*');
+
+      // Иначе – пытаемся вызвать Web Share напрямую
+      } else if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file] });
+        } catch (err) {
+          console.error('Ошибка Web Share для фото:', err);
         }
-      }, 'image/jpeg', 0.8);
-    });
-  }
+      } 
+      // Прямого fallback-а на скачивание здесь нет
+    }, 'image/jpeg', 0.8);
+  });
+}
 
   // Обработчик кнопки вспышки/подсветки
   flashBtn.addEventListener('click', async () => {
