@@ -17,7 +17,7 @@ async function loadFFmpegScript() {
 
 const API_TOKEN = 'eyJhbGciOiJIUzI1NiIsImtpZCI6IkNhbnZhc1MyU0hNQUNQcm9kIiwidHlwIjoiSldUIn0.eyJhdWQiOiJjYW52YXMtY2FudmFzYXBpIiwiaXNzIjoiY2FudmFzLXMyc3Rva2VuIiwibmJmIjoxNzQ1ODUyMzQ2LCJzdWIiOiIzYjNjZWVjNy1iNWY2LTQxNDUtOTZiYy0wYWE3ZDJkNDJjOGZ-U1RBR0lOR343NDlkNThlYy1hMDFkLTQwYzgtYTAyYi1mZmVjMjJmYzU0YWEifQ.HBMfpeAj-jddS_0D7t1ZS6WO_bHFBGRgC4VZLw8sBlU';
 const LENS_GROUP_ID = 'f01d35c1-cfc6-4960-b3c9-de2ce373053a';
-const LENS_ID = 'e864abd7-b5d2-4a4f-a71d-f7dd95d0caf8';
+const LENS_ID = 'caba4509-0c73-4f10-a617-f444c663340f';
 
 let facingMode = 'user';
 let session, liveCanvas;
