@@ -226,24 +226,18 @@ window.addEventListener('DOMContentLoaded', async () => {
       tempCanvas.width = liveCanvas.width;
       tempCanvas.height = liveCanvas.height;
       tempCanvas.getContext('2d').drawImage(liveCanvas, 0, 0);
+
       tempCanvas.toBlob(async (blob) => {
         if (!blob) return;
         const file = new File([blob], 'snap-photo.png', { type: 'image/png' });
-        try {
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
             await navigator.share({ files: [file] });
-          } else {
-            await navigator.share({ title: 'Снимок', url: URL.createObjectURL(blob) });
+          } catch (err) {
+            console.error('Ошибка Web Share для фото:', err);
           }
-        } catch (err) {
-          console.error('Ошибка Web Share для фото:', err);
-          // fallback на скачивание
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = 'snap-photo.png';
-          a.click();
-          URL.revokeObjectURL(url);
+        } else {
+          console.warn('Шэринг файлов не поддерживается этим браузером.');
         }
       }, 'image/png');
     });
