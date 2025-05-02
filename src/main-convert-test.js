@@ -17,7 +17,7 @@ async function loadFFmpegScript() {
 
 const API_TOKEN = 'eyJhbGciOiJIUzI1NiIsImtpZCI6IkNhbnZhc1MyU0hNQUNQcm9kIiwidHlwIjoiSldUIn0.eyJhdWQiOiJjYW52YXMtY2FudmFzYXBpIiwiaXNzIjoiY2FudmFzLXMyc3Rva2VuIiwibmJmIjoxNzQ1ODUyMzQ2LCJzdWIiOiIzYjNjZWVjNy1iNWY2LTQxNDUtOTZiYy0wYWE3ZDJkNDJjOGZ-U1RBR0lOR343NDlkNThlYy1hMDFkLTQwYzgtYTAyYi1mZmVjMjJmYzU0YWEifQ.HBMfpeAj-jddS_0D7t1ZS6WO_bHFBGRgC4VZLw8sBlU';
 const LENS_GROUP_ID = 'f01d35c1-cfc6-4960-b3c9-de2ce373053a';
-const LENS_ID = '2e374a4a-7e07-48d2-8959-448adb89dcd9';
+const LENS_ID = 'e864abd7-b5d2-4a4f-a71d-f7dd95d0caf8';
 
 let facingMode = 'user';
 let session, liveCanvas;
@@ -256,7 +256,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 if (navigator.share || window.parent !== window) {
   sharePhotoBtn.style.display = 'block';
   sharePhotoBtn.addEventListener('click', async () => {
-    const tempCanvas = document.createElement('canvas');
+    const tempCanvas = document.createElement('canvas');  
     tempCanvas.width = liveCanvas.width;
     tempCanvas.height = liveCanvas.height;
     tempCanvas.getContext('2d').drawImage(liveCanvas, 0, 0);
