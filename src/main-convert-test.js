@@ -2,7 +2,7 @@ import { bootstrapCameraKit, createMediaStreamSource, Transform2D } from '@snap/
 
 let timerEl;
 let timerInterval;
-
+let flashBtn, screenFlash, flashOn = false, supportsTorch = false;
 // Load ffmpeg.wasm via CDN if not already loaded
 async function loadFFmpegScript() {
   if (window.FFmpeg && typeof FFmpeg.createFFmpeg === 'function') return;
@@ -53,6 +53,13 @@ async function startCamera() {
   });
   originalMediaStream = mediaStream;
 
+  // Определяем поддержку физической вспышки и показываем кнопку
+  const videoTrack = mediaStream.getVideoTracks()[0];
+  const capabilities = videoTrack.getCapabilities();
+  supportsTorch = !!capabilities.torch;
+  flashBtn.style.display = 'block';
+  flashBtn.style.background = flashOn ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.8)';
+
   const cameraSource = createMediaStreamSource(mediaStream, {
     transform: facingMode === 'user' ? Transform2D.MirrorX : Transform2D.None,
     cameraType: facingMode
@@ -102,8 +109,8 @@ function setupCaptureLogic() {
     ]);
     mediaRecorder = new MediaRecorder(mixedStream, {
       mimeType: 'video/webm; codecs=vp8',
-      videoBitsPerSecond: 5000000,
-      audioBitsPerSecond: 128000
+      videoBitsPerSecond: 3000000,
+      audioBitsPerSecond: 96000  
     });
     recordedChunks = [];
 
@@ -200,8 +207,10 @@ async function convertWebmToMp4(webmBlob) {
     '-i', 'input.webm',
     '-r', '30',     
     '-c:v', 'libx264',
-    '-b:v', '5M', 
+    '-crf', '26',        
     '-preset', 'ultrafast',
+    '-c:a', 'aac',
+    '-b:a', '96k',  
     'output.mp4'
   );
 
@@ -219,7 +228,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.error('FFmpeg load error:', e);
   }
   timerEl = document.getElementById('record-timer');
-
+  // Инициализация кнопки вспышки и подсветки
+  flashBtn     = document.getElementById('flash-btn');
+  screenFlash  = document.getElementById('screen-flash');
   // Инициализируем CameraKit
   initializeCameraKit().catch(console.error);
 
@@ -249,4 +260,24 @@ window.addEventListener('DOMContentLoaded', async () => {
       }, 'image/jpeg', 0.8);
     });
   }
+
+  // Обработчик кнопки вспышки/подсветки
+  flashBtn.addEventListener('click', async () => {
+    flashOn = !flashOn;
+    // Обновляем индикатор кнопки (opacity)
+    flashBtn.style.background = flashOn ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.6)';
+
+    if (supportsTorch) {
+      // Включаем/выключаем физическую вспышку
+      try {
+        await originalMediaStream.getVideoTracks()[0]
+          .applyConstraints({ advanced: [{ torch: flashOn }] });
+      } catch (e) {
+        console.warn('Не удалось переключить torch:', e);
+      }
+    } else {
+      // Фallback – экранная подсветка
+      screenFlash.style.display = flashOn ? 'block' : 'none';
+    }
+  });
 });

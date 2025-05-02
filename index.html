@@ -102,6 +102,33 @@
 ">0</div>
   <button id="capture-btn"></button>
   <button id="switch-camera-btn" style="display: none;">🔃</button>
+    <!-- Кнопка вспышки/подсветки -->
+    <button id="flash-btn" style="
+    display: none;
+    position: fixed;
+    top: 100px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.6);
+    font-size: 24px;
+    cursor: pointer;
+    z-index: 1000;
+  ">🔦</button>
+
+  <!-- Оверлей для экранной подсветки -->
+  <div id="screen-flash" style="
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: #fff;
+    opacity: 0.6;
+    pointer-events: none;
+    z-index: 900;
+  "></div>
   <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
 
   <script type="module" src="/src/main-convert-test.js"></script>
