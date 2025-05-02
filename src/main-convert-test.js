@@ -77,12 +77,19 @@ function setupCaptureLogic() {
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = liveCanvas.width;
     tempCanvas.height = liveCanvas.height;
-    tempCanvas.getContext('2d').drawImage(liveCanvas, 0, 0);
-    const image = tempCanvas.toDataURL('image/png');
-    const a = document.createElement('a');
-    a.href = image;
-    a.download = 'whoisreezzy.png';
-    a.click();
+    const ctx = tempCanvas.getContext('2d');
+    ctx.drawImage(liveCanvas, 0, 0);
+
+    // Записываем JPEG с качеством 0.8 вместо PNG
+    tempCanvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'snap-photo.jpg';
+      a.click();
+      URL.revokeObjectURL(url);
+    }, 'image/jpeg', 0.8);
   };
 
   let recordingTimeout;
@@ -229,7 +236,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
       tempCanvas.toBlob(async (blob) => {
         if (!blob) return;
-        const file = new File([blob], 'snap-photo.png', { type: 'image/png' });
+        const file = new File([blob], 'snap-photo.jpg', { type: 'image/jpeg' });
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           try {
             await navigator.share({ files: [file] });
@@ -239,7 +246,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         } else {
           console.warn('Шэринг файлов не поддерживается этим браузером.');
         }
-      }, 'image/png');
+      }, 'image/jpeg', 0.8);
     });
   }
 });
