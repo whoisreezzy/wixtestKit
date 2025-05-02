@@ -72,14 +72,17 @@
 <!-- Кнопка «Поделиться фото» (показывается, если поддерживается Web Share API) -->
 <button id="share-photo-btn" style="
  display: none;
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  border: none;
-  background: white;
-  font-size: 24px;
-  margin-left: 10px;
-  cursor: pointer;
+ position: fixed;
+ bottom: 30px;
+ left: calc(50% + 70px);
+ width: 60px;
+ height: 60px;
+ border-radius: 50%;
+ border: none;
+ background: white;
+ font-size: 24px;
+ cursor: pointer;
+ z-index: 1000;
 ">📤</button>
 
 
