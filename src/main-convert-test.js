@@ -3,6 +3,7 @@ import { bootstrapCameraKit, createMediaStreamSource, Transform2D } from '@snap/
 let timerEl;
 let timerInterval;
 let flashBtn, screenFlash, flashOn = false, supportsTorch = false;
+let captureCanvas; // Canvas для съемки фото/видео
 // Load ffmpeg.wasm via CDN if not already loaded
 async function loadFFmpegScript() {
   if (window.FFmpeg && typeof FFmpeg.createFFmpeg === 'function') return;
@@ -16,9 +17,10 @@ async function loadFFmpegScript() {
 }
 
 const API_TOKEN = 'eyJhbGciOiJIUzI1NiIsImtpZCI6IkNhbnZhc1MyU0hNQUNQcm9kIiwidHlwIjoiSldUIn0.eyJhdWQiOiJjYW52YXMtY2FudmFzYXBpIiwiaXNzIjoiY2FudmFzLXMyc3Rva2VuIiwibmJmIjoxNzQ1ODUyMzQ2LCJzdWIiOiIzYjNjZWVjNy1iNWY2LTQxNDUtOTZiYy0wYWE3ZDJkNDJjOGZ-U1RBR0lOR343NDlkNThlYy1hMDFkLTQwYzgtYTAyYi1mZmVjMjJmYzU0YWEifQ.HBMfpeAj-jddS_0D7t1ZS6WO_bHFBGRgC4VZLw8sBlU';
-const LENS_GROUP_ID = 'f01d35c1-cfc6-4960-b3c9-de2ce373053a';
-const LENS_ID = 'caba4509-0c73-4f10-a617-f444c663340f';
-
+ const LENS_GROUP_ID = 'f01d35c1-cfc6-4960-b3c9-de2ce373053a';
+//const LENS_GROUP_ID = 'cc1300b1-fb04-4970-ae27-7c59fa607c1f';
+const LENS_ID = '7cd8ac5a-d0d5-49da-9acc-19bf6efd5faf';
+//const LENS_ID = '58553360909';
 let facingMode = 'user';
 let session, liveCanvas;
 let originalMediaStream;
@@ -38,6 +40,8 @@ async function initializeCameraKit() {
   const lens = await cameraKit.lensRepository.loadLens(LENS_ID, LENS_GROUP_ID);
   if (lens) await session.applyLens(lens);
   await session.play();
+  // Начинаем рендеринг capture-таргета (для фото/видео)
+  await session.play('capture');
 
   setupCaptureLogic();
 }
@@ -70,6 +74,7 @@ async function startCamera() {
   const canvasContainer = document.getElementById('canvas-container');
   canvasContainer.innerHTML = '';
   liveCanvas = session.output.live;
+  captureCanvas = session.output.capture;
   liveCanvas.style.width = '100vw';
   liveCanvas.style.height = '100vh';
   liveCanvas.style.transform = 'none';
@@ -82,10 +87,10 @@ function setupCaptureLogic() {
 
   const takePhoto = () => {
     const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = liveCanvas.width;
-    tempCanvas.height = liveCanvas.height;
+    tempCanvas.width = captureCanvas.width;
+    tempCanvas.height = captureCanvas.height;
     const ctx = tempCanvas.getContext('2d');
-    ctx.drawImage(liveCanvas, 0, 0);
+    ctx.drawImage(captureCanvas, 0, 0);
 
     // Записываем JPEG с качеством 0.8 вместо PNG
     tempCanvas.toBlob((blob) => {
@@ -102,7 +107,7 @@ function setupCaptureLogic() {
   let recordingTimeout;
 
   const startRecording = () => {
-    const canvasStream = liveCanvas.captureStream(30);
+    const canvasStream = captureCanvas.captureStream(30);
     const mixedStream = new MediaStream([
       ...canvasStream.getVideoTracks(),
       ...originalMediaStream.getAudioTracks()
